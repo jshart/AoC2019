@@ -100,3 +100,53 @@ public class InputFile
     }
   }
 }
+
+public class BitMask
+{
+  int bm=0;
+  public BitMask()
+  {
+  }
+  public int setBit(int i)
+  {
+    bm |= 1<<i;   
+    return(bm);
+  }
+  public int bitSet(int i)
+  {
+    return(bm & (1<<i));
+  }
+  public void printBitMask()
+  {
+    println("BM:"+Integer.toBinaryString(bm));
+  }
+}
+
+public class Minimum
+{
+  int value=0;
+  boolean set=false;
+  
+  public Minimum()
+  {
+  }
+
+  public void set(int v)
+  {
+    // Always set if this is the first time, but subsequently only set
+    // if its less as we're trying to track the shortest distant. This
+    // is overkill, as the *first* time should always be the shortest
+    if (set==false)
+    {
+      value=v;
+      set=true;
+    }
+    else
+    {
+      if (v<value)
+      {
+        value=v;
+      }
+    }
+  }
+}
