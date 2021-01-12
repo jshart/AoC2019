@@ -4,7 +4,7 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
-String filebase = new String("C:\\Users\\jsh27\\OneDrive\\Documents\\GitHub\\AoC2019\\Day5\\data\\mydata");
+String filebase = new String("C:\\Users\\jsh27\\OneDrive\\Documents\\GitHub\\AoC2019\\Day5\\data\\example");
 
 //ArrayList<String> fieldLines = new ArrayList<String>();
 //int numFieldLines=0;
@@ -140,6 +140,7 @@ public class IntcodeProgram
     int command=0;
     int temp=0;
     int lhs=0, rhs=0, dest=0;
+    int rawOpcode=0;
     
     while (true)
     {
@@ -148,8 +149,18 @@ public class IntcodeProgram
       // mode we're in. I should also break execute into 2 - with
       // a step() function and a wrapper loop to make it easier to 
       // deal with drawing later if needed.
+      rawOpcode=opcode.get(pc++);
+      command=rawOpcode % 100;
+      rawOpcode-=command;
       
-      switch (command=opcode.get(pc++))
+      // TODO - create code to parse remainder and create mode indicators
+      
+      if (dl>0)
+      {
+        println("OPCODE Parse cmd=["+command+"] mode bits=["+rawOpcode+"]");
+      }
+      
+      switch (command)
       {
         case 1: // add
           // Get the value stored at position pointed to by PC
@@ -162,6 +173,7 @@ public class IntcodeProgram
           }
           opcode.put(dest,(lhs+rhs));
           break;
+          
         case 2: // multiple
           // Get the value stored at position pointed to by PC
           lhs=opcode.get(opcode.get(pc++));
@@ -173,6 +185,7 @@ public class IntcodeProgram
           }
           opcode.put(dest,(lhs*rhs));
           break;
+          
         case 3: // input
           // pop an input value off the stack
           temp=inputStack.get(0);
@@ -186,12 +199,19 @@ public class IntcodeProgram
           }
           opcode.put(dest,temp);
           break;
+          
         case 4: // output
           temp=opcode.get(opcode.get(pc++));
           println("OUTPUT==["+temp+"]==");
           break;
+          
         case 99: // no-op
+          if (dl>0)
+          {
+            println("___ EXITING ___");
+          }
           return;
+          
         default:
           println("*** UNKNOWN OPCODE="+command+" ***");
       }
