@@ -158,6 +158,15 @@ public class IntcodeProgram
       if (dl>0)
       {
         println("OPCODE Parse cmd=["+command+"] mode bits=["+rawOpcode+"]");
+        if (rawOpcode>100)
+        {
+          rawOpcode/=100;
+          println("R:"+rawOpcode);
+          
+          // TODO - not working yet.
+          println(rawOpcode%1);
+          println(rawOpcode%10);
+        }
       }
       
       switch (command)
