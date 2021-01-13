@@ -4,7 +4,7 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
-String filebase = new String("C:\\Users\\jsh27\\OneDrive\\Documents\\GitHub\\AoC2019\\Day5\\data\\example");
+String filebase = new String("C:\\Users\\jsh27\\OneDrive\\Documents\\GitHub\\AoC2019\\Day5\\data\\mydata");
 
 //ArrayList<String> fieldLines = new ArrayList<String>();
 //int numFieldLines=0;
@@ -33,7 +33,7 @@ void setup() {
 
 
   IntcodeProgram ip=new IntcodeProgram(input.lines.get(0));
-  ip.addInput(1);
+  ip.addInput(5);
   ip.execute();
 }
 
@@ -141,41 +141,115 @@ public class IntcodeProgram
     int temp=0;
     int lhs=0, rhs=0, dest=0;
     int rawOpcode=0;
+    int maxParams=3;
+    int[] mode = new int[maxParams];
+    int i=0;
     
     while (true)
     {
-      // TODO - need to break out the code here so I parse the 
-      // first digits of the opcode to work out what addressing
-      // mode we're in. I should also break execute into 2 - with
+      // TODO - I should also break execute into 2 - with
       // a step() function and a wrapper loop to make it easier to 
       // deal with drawing later if needed.
       rawOpcode=opcode.get(pc++);
+      
+      // Strip off the actual instruction
       command=rawOpcode % 100;
       rawOpcode-=command;
-      
-      // TODO - create code to parse remainder and create mode indicators
-      
+      rawOpcode/=100;
+
       if (dl>0)
       {
         println("OPCODE Parse cmd=["+command+"] mode bits=["+rawOpcode+"]");
-        if (rawOpcode>100)
+      }
+
+      // Recover the mode and default any missing modes to 0
+      for (i=0;i<maxParams;i++)
+      {
+        if (rawOpcode>0)
         {
-          rawOpcode/=100;
-          println("R:"+rawOpcode);
-          
-          // TODO - not working yet.
-          println(rawOpcode%1);
-          println(rawOpcode%10);
+          mode[i]=rawOpcode%10;
+          rawOpcode/=10;
+        }
+        else
+        {
+          mode[i]=0;
+        }
+      }
+      
+      if (dl>0)
+      {
+        for (i=0;i<maxParams;i++)
+        {
+          println("M"+i+":"+mode[i]);
         }
       }
       
       switch (command)
       {
-        case 1: // add
-          // Get the value stored at position pointed to by PC
-          lhs=opcode.get(opcode.get(pc++));
-          rhs=opcode.get(opcode.get(pc++));
+        case 1: // Add
+        case 2: // Multiple
+        case 7: // less than
+        case 8: // equals
+          if (mode[0]==0)
+          {
+            lhs=opcode.get(opcode.get(pc++));
+          }
+          else
+          {
+            lhs=opcode.get(pc++);
+          }
+          if (mode[1]==0)
+          {
+            rhs=opcode.get(opcode.get(pc++));
+          }
+          else
+          {
+            rhs=opcode.get(pc++);
+          }
+
+          // Intentional fall through, as this expects to also pick up
+          // the dest code which is the same for opcode 3 as well
+        case 3: // input
           dest=opcode.get(pc++);
+          
+          break;
+
+        case 5: // jump-if-true
+        case 6: // jump-if-false
+          if (mode[0]==0)
+          {
+            lhs=opcode.get(opcode.get(pc++));
+          }
+          else
+          {
+            lhs=opcode.get(pc++);
+          }
+          if (mode[1]==0)
+          {
+            rhs=opcode.get(opcode.get(pc++));
+          }
+          else
+          {
+            rhs=opcode.get(pc++);
+          }
+          break;
+          
+        case 4: // output
+          // Get the value stored at position pointed to by PC
+          if (mode[0]==0)
+          {
+            lhs=opcode.get(opcode.get(pc++));
+          }
+          else
+          {
+            lhs=opcode.get(pc++);
+          }
+          break;
+      }
+      
+      switch (command)
+      {
+        case 1: // add
           if (dl>0)
           {
             println("->"+lhs+"+"+rhs+"->"+dest);
@@ -184,10 +258,6 @@ public class IntcodeProgram
           break;
           
         case 2: // multiple
-          // Get the value stored at position pointed to by PC
-          lhs=opcode.get(opcode.get(pc++));
-          rhs=opcode.get(opcode.get(pc++));
-          dest=opcode.get(pc++);
           if (dl>0)
           {
             println("->"+lhs+"*"+rhs+"->"+dest);
@@ -200,8 +270,6 @@ public class IntcodeProgram
           temp=inputStack.get(0);
           inputStack.remove(0);
           
-          // work out the destination location and update
-          dest=opcode.get(pc++);
           if (dl>0)
           {
             println("->IN="+temp+"->"+dest);
@@ -210,8 +278,37 @@ public class IntcodeProgram
           break;
           
         case 4: // output
-          temp=opcode.get(opcode.get(pc++));
-          println("OUTPUT==["+temp+"]==");
+          println("OUTPUT==["+lhs+"]==");
+          break;
+
+        case 5: // jump-if-true
+          if (lhs!=0)
+          {
+            pc=rhs;
+          }
+          break;
+          
+        case 6: // jump-if-false
+          if (lhs==0)
+          {
+            pc=rhs;
+          }
+          break;
+          
+        case 7: // less than
+          if (dl>0)
+          {
+            println("->"+lhs+"<"+rhs+"->"+dest);
+          }
+          opcode.put(dest,(lhs<rhs?1:0));
+          break;
+          
+        case 8: // equals
+          if (dl>0)
+          {
+            println("->"+lhs+"=="+rhs+"->"+dest);
+          }
+          opcode.put(dest,(lhs==rhs?1:0));
           break;
           
         case 99: // no-op
