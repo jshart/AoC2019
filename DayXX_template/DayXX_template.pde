@@ -316,3 +316,67 @@ public class LinkedList
     println((back==null?"null":back.cupLabel)+"<-["+cupLabel+"]->"+(forward==null?"null":forward.cupLabel));
   }
 }
+
+// Given a string, this class can create *all* permutations
+// of that string by rearranging characters - each character
+// is still used only the same amount of times as the original
+// source.
+public class Permutations
+{
+  String components;
+  
+  public Permutations(String s)
+  {
+    components=s;
+  }
+  
+  public void walk()
+  {
+    walk(components,"");
+  }
+  
+  public void walk(String input, String current)
+  {
+    int i=0;
+    
+    // for each character in the input
+    for (i=0;i<input.length();i++)
+    {
+      // if there is more than 1 character left, then we need to fork and repeat
+      // the walk for each new substring
+      if (input.length()>1)
+      {
+        // lock in this char, by removing the character at the current index from the string
+        String remainder=input.substring(0,i)+input.substring(i+1,input.length());
+        //println(input.charAt(i)+" R:"+remainder);
+        
+        // walk the tree for the remaining characters now that we've locked one
+        // in for this set of permuations.
+        walk(remainder,current+input.charAt(i));
+      }
+      else
+      {
+        // we only have one character left, so we cant "walk" any further on this branch
+        // dump the permuation so far, plus this last remaining char
+        //println("[P]-->"+current+input);
+        printPerm(current+input);
+      }
+    }
+  }
+  
+  public void printPerm(String s)
+  {
+    int i=0;
+    print("{");
+    
+    for (i=0;i<s.length();i++)
+    {
+      print(s.charAt(i));
+      if (i+1<s.length())
+      {
+        print(",");
+      }
+    }
+    println("},");
+  }
+}
