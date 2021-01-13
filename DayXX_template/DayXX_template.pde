@@ -150,3 +150,169 @@ public class Minimum
     }
   }
 }
+
+public class LinkedList
+{
+  LinkedList forward=null;
+  LinkedList back=null;
+  int cupLabel=-1;
+  
+  public LinkedList(int c)
+  {
+    cupLabel=c;
+  }
+  
+  public LinkedList(int c, LinkedList l)
+  {
+    cupLabel=c;
+    back=l;
+    l.forward=this;
+  }
+  
+  public boolean inList(int c)
+  {
+    LinkedList start;
+    LinkedList n;
+    
+    n=this;
+    start=this;
+    
+    do 
+    {
+      if (n.cupLabel==c)
+      {
+        return(true);
+      }
+      n=n.forward;
+    }
+    while (n!=null && n!=start);
+    return(false);
+  }
+  
+  public LinkedList cutSubList(int nodes)
+  {
+    int i=0;
+    LinkedList subListStart=null;
+    LinkedList remainderList=null;
+    LinkedList cutpoint=null;
+    
+    // capture the start of the sublist
+    subListStart=this.forward;
+    this.forward=null;
+    cutpoint=this;
+    
+    // wind forward to the point where the remainder list starts
+    remainderList=subListStart;
+    for (i=0;i<nodes;i++)
+    {
+      remainderList=remainderList.forward;
+    }
+    
+    // detach the sublist from the main list
+    remainderList.back.forward=null;
+    subListStart.back=null;
+    
+    //reattach the 2 halves of the list
+    //println("recombining lists; this node");
+    //this.printNode();
+    //println("remainder:");
+    //remainderList.printList();
+    
+    cutpoint.forward=remainderList;
+    remainderList.back=cutpoint;
+
+    //println("Combined list:");
+    //this.printList();
+    
+    return(subListStart);
+  }
+  
+  public void addListAfter(LinkedList subListToAdd)
+  {
+    LinkedList addToLocation=null;
+    LinkedList nextNodeToAdd=null;
+    
+    addToLocation=this;
+    boolean done=false;
+
+    int max=5;
+    
+    do 
+    {
+      // is this the end of the sublist?
+      if (subListToAdd.forward==null)
+      {
+        done=true;
+      }
+      else
+      {
+        // Save the next node
+        nextNodeToAdd=subListToAdd.forward;
+        
+        // detach this one from the sub list.
+        subListToAdd.forward=null;
+      }
+
+      //print("adding to node:");
+      //addToLocation.printNode();
+
+      //print("adding node:");
+      //subListToAdd.printNode();
+      subListToAdd.addNodeAfter(addToLocation);
+      
+      //print("node added:");
+      //subListToAdd.printNode();
+      
+      // move forward after the node we just added
+      addToLocation=addToLocation.forward;
+      
+      
+      // move to the next node in the sublist we're trying to add
+      subListToAdd=nextNodeToAdd;
+    }
+    while (done==false && max-- >=0);    
+  }
+
+  // Assumes an *always* valid node b to attach too, will optionally forward
+  // link if b already has a forward link. i.e. will *insert* if b is middle
+  // of a list, but will add if b is end of list.
+  public void addNodeAfter(LinkedList b)
+  {
+    // save the current forward link, as we'll attach this node to that eventually
+    LinkedList f=b.forward;
+    
+    // connect this node *backwards* to the b node...
+    this.back=b;
+    b.forward=this;
+    
+    if (f!=null)
+    {
+      // ... and *forwards* to the f node, which we saved earlier
+      this.forward=f;
+      f.back=this;
+    }
+  }
+
+  public void printList()
+  {
+    LinkedList start;
+    LinkedList n;
+    
+    n=this;
+    start=this;
+    
+    do 
+    {
+      n.printNode();
+      n=n.forward;
+    }
+    while (n!=null && n!=start);
+  }
+  
+  
+  public void printNode()
+  {
+    //println("C:"+cupLabel+" fwd cup label:"+(forward==null?"null":forward.cupLabel)+" back cup label:"+(back==null?"null":back.cupLabel));
+    println((back==null?"null":back.cupLabel)+"<-["+cupLabel+"]->"+(forward==null?"null":forward.cupLabel));
+  }
+}
