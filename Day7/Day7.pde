@@ -37,7 +37,7 @@ void setup() {
   
   }
   
-  Permutations p=new Permutations("12345");
+  Permutations p=new Permutations("01234");
   p.walk();
 }
 
