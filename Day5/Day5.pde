@@ -35,6 +35,10 @@ void setup() {
   IntcodeProgram ip=new IntcodeProgram(input.lines.get(0));
   ip.addInput(5);
   ip.execute();
+  
+  ip.initialise();
+  ip.addInput(5);
+  ip.execute();
 }
 
 void printMasterList()
@@ -101,22 +105,39 @@ public class IntcodeProgram
   String[] rawData;
   HashMap<Integer, Integer> opcode = new HashMap<Integer, Integer>();
   int pc=0;
-  int dl=1;
+  int dl=0;
   ArrayList<Integer> inputStack = new ArrayList<Integer>();
+  boolean running=false;
+  int lastOutput=0;
   
   public IntcodeProgram(String s)
   {
-     rawData=s.split(",");
+    rawData=s.split(",");
      
+    initialise();
+  }
+  
+  // clear all state info and reset to initial state
+  // this allows the object to be re-enterant and
+  // re-run repeatedly (e.g. with different input).
+  public void initialise()
+  {
      int l=rawData.length;
      int i=0;
      int temp=0;
+     
+     opcode.clear();
      
      for (i=0;i<l;i++)
      {
        temp=Integer.parseInt(rawData[i]);
        opcode.put(i,temp);
      }
+     
+     inputStack.clear();
+     pc=0;
+     running=false;
+     lastOutput=0;
   }
   
   public void addInput(int i)
@@ -135,7 +156,19 @@ public class IntcodeProgram
      }
   }
   
-  public void execute()
+  public int execute()
+  {
+    running=true;
+    
+    while(running)
+    {
+      executeStep();
+    }
+    println("___ EXITING with ["+lastOutput+"] ____");
+    return(lastOutput);
+  }
+  
+  public void executeStep()
   {
     int command=0;
     int temp=0;
@@ -144,183 +177,180 @@ public class IntcodeProgram
     int maxParams=3;
     int[] mode = new int[maxParams];
     int i=0;
+    boolean needLhs=false, needRhs=false, needDest=false;
+
+    rawOpcode=opcode.get(pc++);
     
-    while (true)
+    // Strip off the actual instruction
+    command=rawOpcode % 100;
+    rawOpcode-=command;
+    rawOpcode/=100;
+
+    if (dl>0)
     {
-      // TODO - I should also break execute into 2 - with
-      // a step() function and a wrapper loop to make it easier to 
-      // deal with drawing later if needed.
-      rawOpcode=opcode.get(pc++);
-      
-      // Strip off the actual instruction
-      command=rawOpcode % 100;
-      rawOpcode-=command;
-      rawOpcode/=100;
+      println("OPCODE Parse cmd=["+command+"] mode bits=["+rawOpcode+"]");
+    }
 
-      if (dl>0)
+    // Recover the mode and default any missing modes to 0
+    for (i=0;i<maxParams;i++)
+    {
+      if (rawOpcode>0)
       {
-        println("OPCODE Parse cmd=["+command+"] mode bits=["+rawOpcode+"]");
+        mode[i]=rawOpcode%10;
+        rawOpcode/=10;
       }
-
-      // Recover the mode and default any missing modes to 0
-      for (i=0;i<maxParams;i++)
+      else
       {
-        if (rawOpcode>0)
-        {
-          mode[i]=rawOpcode%10;
-          rawOpcode/=10;
-        }
-        else
-        {
-          mode[i]=0;
-        }
-      }
-      
-      if (dl>0)
-      {
-        for (i=0;i<maxParams;i++)
-        {
-          println("M"+i+":"+mode[i]);
-        }
-      }
-      
-      switch (command)
-      {
-        case 1: // Add
-        case 2: // Multiple
-        case 7: // less than
-        case 8: // equals
-          if (mode[0]==0)
-          {
-            lhs=opcode.get(opcode.get(pc++));
-          }
-          else
-          {
-            lhs=opcode.get(pc++);
-          }
-          if (mode[1]==0)
-          {
-            rhs=opcode.get(opcode.get(pc++));
-          }
-          else
-          {
-            rhs=opcode.get(pc++);
-          }
-
-          // Intentional fall through, as this expects to also pick up
-          // the dest code which is the same for opcode 3 as well
-        case 3: // input
-          dest=opcode.get(pc++);
-          
-          break;
-
-        case 5: // jump-if-true
-        case 6: // jump-if-false
-          if (mode[0]==0)
-          {
-            lhs=opcode.get(opcode.get(pc++));
-          }
-          else
-          {
-            lhs=opcode.get(pc++);
-          }
-          if (mode[1]==0)
-          {
-            rhs=opcode.get(opcode.get(pc++));
-          }
-          else
-          {
-            rhs=opcode.get(pc++);
-          }
-          break;
-          
-        case 4: // output
-          // Get the value stored at position pointed to by PC
-          if (mode[0]==0)
-          {
-            lhs=opcode.get(opcode.get(pc++));
-          }
-          else
-          {
-            lhs=opcode.get(pc++);
-          }
-          break;
-      }
-      
-      switch (command)
-      {
-        case 1: // add
-          if (dl>0)
-          {
-            println("->"+lhs+"+"+rhs+"->"+dest);
-          }
-          opcode.put(dest,(lhs+rhs));
-          break;
-          
-        case 2: // multiple
-          if (dl>0)
-          {
-            println("->"+lhs+"*"+rhs+"->"+dest);
-          }
-          opcode.put(dest,(lhs*rhs));
-          break;
-          
-        case 3: // input
-          // pop an input value off the stack
-          temp=inputStack.get(0);
-          inputStack.remove(0);
-          
-          if (dl>0)
-          {
-            println("->IN="+temp+"->"+dest);
-          }
-          opcode.put(dest,temp);
-          break;
-          
-        case 4: // output
-          println("OUTPUT==["+lhs+"]==");
-          break;
-
-        case 5: // jump-if-true
-          if (lhs!=0)
-          {
-            pc=rhs;
-          }
-          break;
-          
-        case 6: // jump-if-false
-          if (lhs==0)
-          {
-            pc=rhs;
-          }
-          break;
-          
-        case 7: // less than
-          if (dl>0)
-          {
-            println("->"+lhs+"<"+rhs+"->"+dest);
-          }
-          opcode.put(dest,(lhs<rhs?1:0));
-          break;
-          
-        case 8: // equals
-          if (dl>0)
-          {
-            println("->"+lhs+"=="+rhs+"->"+dest);
-          }
-          opcode.put(dest,(lhs==rhs?1:0));
-          break;
-          
-        case 99: // no-op
-          if (dl>0)
-          {
-            println("___ EXITING ___");
-          }
-          return;
-          
-        default:
-          println("*** UNKNOWN OPCODE="+command+" ***");
+        mode[i]=0;
       }
     }
+    
+    if (dl>0)
+    {
+      for (i=0;i<maxParams;i++)
+      {
+        println("M"+i+":"+mode[i]);
+      }
+    }
+    
+    
+    // Work out what class of parameters this command is
+    // and decide which parameters it needs to pull from
+    // the stack
+    needLhs=false;
+    needRhs=false;
+    needDest=false;
+    switch (command)
+    {
+      // Anything that needs dest?
+      case 1: // Add
+      case 2: // Multiple
+      case 7: // less than
+      case 8: // equals
+        needLhs=true;
+        needRhs=true;
+        // intention fall through
+      case 3: // input
+        needDest=true;
+        break;
+        
+      // Anything that doesnt need dest?
+      case 5: // jump-if-true
+      case 6: // jump-if-false
+        needRhs=true;
+        // intention fall through
+      case 4: // output
+        needLhs=true;
+        break;
+    }
+    
+    
+    // Now pull the specific parameters that we need
+    // from the stack based on the above classification
+    if (needLhs==true)
+    {
+      if (mode[0]==0)
+      {
+        lhs=opcode.get(opcode.get(pc++));
+      }
+      else
+      {
+        lhs=opcode.get(pc++);
+      }
+    }
+    if (needRhs==true)
+    {
+      if (mode[1]==0)
+      {
+        rhs=opcode.get(opcode.get(pc++));
+      }
+      else
+      {
+        rhs=opcode.get(pc++);
+      }
+    }
+    if (needDest==true)
+    {
+      dest=opcode.get(pc++);
+    }
+    
+    
+    // Now that we've fetched the parameters and decoded
+    // the addressing modes, we should now actually
+    // execute the logic based on the command in question
+    switch (command)
+    {
+      case 1: // add
+        if (dl>0)
+        {
+          println("->"+lhs+"+"+rhs+"->"+dest);
+        }
+        opcode.put(dest,(lhs+rhs));
+        break;
+        
+      case 2: // multiple
+        if (dl>0)
+        {
+          println("->"+lhs+"*"+rhs+"->"+dest);
+        }
+        opcode.put(dest,(lhs*rhs));
+        break;
+        
+      case 3: // input
+        // pop an input value off the stack
+        temp=inputStack.get(0);
+        inputStack.remove(0);
+        
+        if (dl>0)
+        {
+          println("->IN="+temp+"->"+dest);
+        }
+        opcode.put(dest,temp);
+        break;
+        
+      case 4: // output
+        println("OUTPUT==["+lhs+"]==");
+        lastOutput=lhs;
+        break;
+
+      case 5: // jump-if-true
+        if (lhs!=0)
+        {
+          pc=rhs;
+        }
+        break;
+        
+      case 6: // jump-if-false
+        if (lhs==0)
+        {
+          pc=rhs;
+        }
+        break;
+        
+      case 7: // less than
+        if (dl>0)
+        {
+          println("->"+lhs+"<"+rhs+"->"+dest);
+        }
+        opcode.put(dest,(lhs<rhs?1:0));
+        break;
+        
+      case 8: // equals
+        if (dl>0)
+        {
+          println("->"+lhs+"=="+rhs+"->"+dest);
+        }
+        opcode.put(dest,(lhs==rhs?1:0));
+        break;
+        
+      case 99: // no-op
+        running=false;
+        break;
+        
+      default:
+        println("*** UNKNOWN OPCODE="+command+" ***");
+    }
+    
+    return;
   }
 }
