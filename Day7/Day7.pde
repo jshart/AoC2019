@@ -96,9 +96,26 @@ public class Permutations
       {
         // we only have one character left, so we cant "walk" any further on this branch
         // dump the permuation so far, plus this last remaining char
-        println("[P]-->"+current+input);
+        //println("[P]-->"+current+input);
+        printPerm(current+input);
       }
     }
+  }
+  
+  public void printPerm(String s)
+  {
+    int i=0;
+    print("{");
+    
+    for (i=0;i<s.length();i++)
+    {
+      print(s.charAt(i));
+      if (i+1<s.length())
+      {
+        print(",");
+      }
+    }
+    println("},");
   }
 }
 
