@@ -164,54 +164,64 @@ void setup() {
 
   IntcodeProgram[] ip=new IntcodeProgram[maxEngines];
   
+  // init all the engines, and cross-connect their I/O channels
   for (i=0;i<maxEngines;i++)
   {
-    ip[i]=new IntcodeProgram(input.lines.get(0));
+    ip[i]=new IntcodeProgram(i,input.lines.get(0));
+    if (i>0)
+    {
+      // this input needs to feed from the output of the previous one
+      ip[i].input = ip[i-1].output;
+    }
   }
+  // the input of the very first element needs to link to the output
+  // of the very last, in order to close the loop.
+  ip[0].input=ip[maxEngines-1].output;
+  
   
   // Loop through all permutations
   for (i=0;i<perms.length;i++)
+  //for (i=0;i<1;i++)
   {
     // initialise all intcode engines with initial
-    // state for this set of permutations.
-    for (j=0;j<perms[i].length;j++)
-    { 
+    // state for this set of permutations. 
+    for (j=0;j<maxEngines;j++)
+    {
       ip[j].initialise();
       ip[j].running=true;
-      ip[j].input.pushValue(perms[i][j]);
-      ip[j].input.dump();
     }
+    print("==== STARTING RUN {"+i+"} ==== with values; ");
     
+    
+    for (j=0;j<perms[i].length;j++)
+    { 
+      ip[j].input.pushValue(perms[i][j]);
+      print(perms[i][j]+" ");
+    }
+    println();
+
+    // to start the whole system off each time, we need to
+    // prime the first engine with an additional input value
     ip[0].input.pushValue(0);
+    
     
     // whilst any engines are running
     do
     {
       anEngineRunning=false;
  
+      // check if any can execute
       for (j=0;j<maxEngines;j++)
-      {
+      {   
         // If this thread is still running then execute it
         if (ip[j].running==true)
         {
-          print("["+j+"] is running |");
+          print("["+j+"] re-enter? |");
           
           anEngineRunning=true;
           
           // execute until we get an output
           result=ip[j].execute();
-          
-          // pass that output into the next engine
-          // (looping around to the first element if
-          // necessary).
-          if (j+1==maxEngines)
-          {
-            ip[0].input.pushValue(ip[j].output.popValue());
-          }
-          else
-          {
-            ip[j+1].input.pushValue(ip[j].output.popValue());
-          }
         }
       }
     } while(anEngineRunning==true);
@@ -219,6 +229,9 @@ void setup() {
     m.set(result);
     result=0;
     println();
+    
+    println("==== ENDING RUN {"+i+"} ==== R:"+anEngineRunning);
+
   }
   
   println("Maximum Value idenitied as:"+m.value);
@@ -292,9 +305,8 @@ public class StackValues
     int i=0;
     for (i=0;i<values.size();i++)
     {
-      print("["+i+"]="+values.get(i)+" ");
+      print("s["+i+"]="+values.get(i)+" ");
     }
-    println();
   }
   
   public void pushValue(int i)
@@ -323,16 +335,27 @@ public class IntcodeProgram
   StackValues input = new StackValues();
   StackValues output = new StackValues();
   int pc=0;
-  int dl=1;
+  int dl=0;
   boolean running=false;
   boolean yielded=false;
   int lastOutput=0;
+  int threadID=-1;
   
-  public IntcodeProgram(String s)
+  public IntcodeProgram(int id, String s)
   {
+    threadID=id;
+    
     rawData=s.split(",");
      
     initialise();
+  }
+  
+  // Allows us to "chain" programs together, we can pass an
+  // *output* stack to the input of this stack and have the
+  // "threads" communicate via their I/O commands.
+  public void connectToInput(StackValues s)
+  {
+    input=s;
   }
   
   // clear all state info and reset to initial state
@@ -353,6 +376,7 @@ public class IntcodeProgram
      }
      
      input.reset();
+     output.reset();
      pc=0;
      running=false;
      lastOutput=0;
@@ -372,29 +396,27 @@ public class IntcodeProgram
   public int execute()
   {
     running=true;
-    
+    yielded=false;
+
     while (running==true && yielded==false)
     {
       executeStep();
     }
     if (yielded==true)
     {
-      println("___ YIELDING ____");
+      print("["+threadID+"]___ YIELDING ____ PC="+pc+" |out size=["+output.values.size()+"] ");
+      output.dump();
+      print("|in size=["+input.values.size()+"] ");
+      input.dump();
+      println();
     }
     else
     {
-      println("___ EXITING with ["+lastOutput+"] ____");
+      println("["+threadID+"]___ EXITING with ["+lastOutput+"] ____");
     }
     return(lastOutput);
   }
   
-  // TODO - need to come up with some way to make the INPUT blocking
-  // and yet able to multi-task. I either need to promote etc intcode
-  // to be a genuine thread. Or I need to add some code such that the
-  // INPUT command pauses (does not move PC on) until such times as
-  // there is a INPUT value in the stack, at which point it will
-  // continue. Basically it needs to flip from a "execute and move on"
-  // mode and into a "repeat polling until value" mode.
   public void executeStep()
   {
     int command=0;
@@ -406,8 +428,6 @@ public class IntcodeProgram
     int i=0;
     boolean needLhs=false, needRhs=false, needDest=false;
     int savedPC=pc;
-
-    yielded=false;
     
     rawOpcode=opcode.get(pc++);
     
@@ -418,7 +438,7 @@ public class IntcodeProgram
 
     if (dl>0)
     {
-      println("OPCODE Parse cmd=["+command+"] mode bits=["+rawOpcode+"]");
+      println("["+threadID+"] OPCODE Parse cmd=["+command+"] mode bits=["+rawOpcode+"]");
     }
 
     // Recover the mode and default any missing modes to 0
@@ -439,7 +459,7 @@ public class IntcodeProgram
     {
       for (i=0;i<maxParams;i++)
       {
-        println("M"+i+":"+mode[i]);
+        println("["+threadID+"] M"+i+":"+mode[i]);
       }
     }
     
@@ -513,7 +533,7 @@ public class IntcodeProgram
       case 1: // add
         if (dl>0)
         {
-          println("->"+lhs+"+"+rhs+"->"+dest);
+          println("["+threadID+"] ->"+lhs+"+"+rhs+"->"+dest);
         }
         opcode.put(dest,(lhs+rhs));
         break;
@@ -521,7 +541,7 @@ public class IntcodeProgram
       case 2: // multiple
         if (dl>0)
         {
-          println("->"+lhs+"*"+rhs+"->"+dest);
+          println("["+threadID+"] ->"+lhs+"*"+rhs+"->"+dest);
         }
         opcode.put(dest,(lhs*rhs));
         break;
@@ -531,6 +551,7 @@ public class IntcodeProgram
         // yield until we have a value
         if (input.values.size()==0)
         {
+          input.dump();
           yielded=true;
           // reset the PC
           pc=savedPC;
@@ -542,14 +563,14 @@ public class IntcodeProgram
           
           if (dl>0)
           {
-            println("->IN="+temp+"->"+dest);
+            println("["+threadID+"] ->IN="+temp+"->"+dest);
           }
           opcode.put(dest,temp);
         }
         break;
         
       case 4: // output
-        println("OUTPUT==["+lhs+"]==");
+        println("["+threadID+"] OUTPUT==["+lhs+"]==");
         lastOutput=lhs;
         output.pushValue(lhs);        
         break;
@@ -571,7 +592,7 @@ public class IntcodeProgram
       case 7: // less than
         if (dl>0)
         {
-          println("->"+lhs+"<"+rhs+"->"+dest);
+          println("["+threadID+"] ->"+lhs+"<"+rhs+"->"+dest);
         }
         opcode.put(dest,(lhs<rhs?1:0));
         break;
@@ -579,7 +600,7 @@ public class IntcodeProgram
       case 8: // equals
         if (dl>0)
         {
-          println("->"+lhs+"=="+rhs+"->"+dest);
+          println("["+threadID+"] ->"+lhs+"=="+rhs+"->"+dest);
         }
         opcode.put(dest,(lhs==rhs?1:0));
         break;
@@ -589,7 +610,7 @@ public class IntcodeProgram
         break;
         
       default:
-        println("*** UNKNOWN OPCODE="+command+" ***");
+        println("["+threadID+"] *** UNKNOWN OPCODE="+command+" ***");
     }
     
     return;
