@@ -151,6 +151,24 @@ public class Minimum
   }
 }
 
+public class Maximum
+{
+  int value=0;
+  
+  public Maximum()
+  {
+  }
+
+  public void set(int v)
+  {
+
+    if (v>value)
+    {
+      value=v;
+    }
+  }
+}
+
 public class LinkedList
 {
   LinkedList forward=null;
