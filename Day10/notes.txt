@@ -1,0 +1,6 @@
+1) Need the ability to track state for each pixel - so maybe consider moving to an object rather than int
+2) create an "expanding box" search starting on a pixel - any asteroids discovered for the first time, we calculate the relative distance/position to our start pixel, and then mark any asteroids that are obscured by that one.
+3) we can do a lazy search of the whole box as we can ignore any pixels already searched (because their state will be tracked)
+4) once the box expands to cover the whole image we're done.
+
+repeat for every asteroid in the set. track maximum count. win a gold star.
