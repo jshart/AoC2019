@@ -25,7 +25,7 @@ void setup() {
   size(500, 500);
   background(0);
   stroke(255);
-  frameRate(10);
+  frameRate(30);
 
   System.out.println("Working Directory = " + System.getProperty("user.dir"));
   println();
@@ -57,53 +57,115 @@ void setup() {
   
 }
 
-int xl=0;
-int yl=0;
+//int xl=0;
+//int yl=0;
 
-int xc=maxX/2;
-int yc=maxY/2;
+//int xc=maxX/2;
+//int yc=maxY/2;
+
+int basex=0,basey=0;
+int sx1=0,sy1=0,sx2=0,sy2=0;
+boolean resetBaseCandidate=false;
 
 void draw() {
   
   int x,y;
   
-  background(100);
+  background(50);
   
+  // current candidate - but its not an
+  // asteroid, so lets reset & skip.
+  if (matrix[basex][basey].asteroid==false)
+  {
+    // CONDITION 1 for resetting the candidate
+    // for the base location is met - this location
+    // is not an asteroid and therefore we cant
+    // build a base here
+    resetBaseCandidate=true;
+  }
+
+  // We must be processing a valid base location if
+  // there is no request to reset it - therefore
+  // we should run a sweep.
+  if (resetBaseCandidate==false)
+  {
+    // increase the radius of the scan zone
+    sx1=(sx1>0?sx1-1:sx1);
+    sy1=(sy1>0?sy1-1:sy1);
+    sx2=(sx2>=maxX?maxX:sx2+1);
+    sy2=(sy2>=maxY?maxY:sy2+1);
+    
+    // run a scan
+    for (x=sx1;x<sx2;x++)
+    {
+      for (y=sy1;y<sy2;y++)
+      {
+        matrix[x][y].hl=true;
+        if (matrix[x][y].asteroid==true)
+        {
+          matrix[x][y].processed=true;
+        }
+      }
+    }
+    
+    // if the radar has covered the whole area then signal
+    // that we want to reset the target
+    if (sx1==0 && sy1==0 && sx2>maxX-1 && sy2>maxY-1)
+    {
+      // CONDITION 2 for resetting the candidate
+      // for the base location is met - we have completed
+      // the sweep for all asteroids, and now know how to
+      // score this location.
+      resetBaseCandidate=true;
+    }
+  }
+  
+  // Draw the grid
   for (x=0;x<maxX;x++)
   {
     for (y=0;y<maxY;y++)
     {
-      if (xl==x)
-      {
-        matrix[x][y].hl=true;
-      }
       matrix[x][y].draw();
+      
+      // We're done with this sweep, so lets use
+      // this convenient run of the draw cycle to
+      // reset all the processed flags ready for
+      // the next cycle.
+      if (resetBaseCandidate==true)
+      {
+        matrix[x][y].processed=false;
+      }
     }
   }
-
+  matrix[basex][basey].drawBase();
   
-
-  drawLineA(0,xc,yc,xl,maxY-1);
-  drawLineA(0,xc,yc,xl,0);
-
-  drawLineA(0,xc,yc,maxX-1,yl);
-  drawLineA(0,xc,yc,0,yl);
-
-
-  xl++;
-  if (xl>=maxX)
+  // OK time to reset the target - which can happen
+  // if the existing target is an asteroid which
+  // we've completed the sweep for, or if the current
+  // slot is not actually an asteroid and therefore
+  // not a valid candiate.
+  if (resetBaseCandidate==true)
   {
-    xl=0;
-    xc=Math.round(random(maxX));
-  }
+    resetBaseCandidate=false;
   
-  yl++;
-  if (yl>=maxY)
-  {
-    yl=0;
-    yc=Math.round(random(maxX));
-  }
+    // Move on candiate base location
+    basex++;
+    if (basex>=maxX)
+    {
+      basex=0;
+      basey++;
+    }
+    if (basey>=maxY)
+    {
+      basey=0;
+    }
   
+    // setup a sweep zone based on current base location
+    sx1=basex;
+    sy1=basey;
+    sx2=sx1;
+    sy2=sy1;
+  }
 }
 
 void drawLineN(int x1,int y1,int x2,int y2)
@@ -179,11 +241,18 @@ public class Location
   {
     if (asteroid==false)
     {
-        fill(0,0,0);
+      fill(0,0,0);
     }
     else
     {
-      fill(255,255,255);
+      if (processed==true)
+      {
+        fill(225,69,0);
+      }
+      else
+      {
+        fill(100,100,100);
+      }
     }
     if (hl==true)
     {
@@ -195,6 +264,12 @@ public class Location
       stroke(100,100,100);
     }
     rect(cellx*gs,celly*gs,gs,gs);
+  }
+  
+  public void drawBase()
+  {
+    fill(0,0,255);
+    circle((cellx*gs)+gs/2,(celly*gs)+gs/2,gs/2);
   }
 }
 
