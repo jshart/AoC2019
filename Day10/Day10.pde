@@ -17,7 +17,7 @@ String filebase = new String("C:\\Users\\jsh27\\OneDrive\\Documents\\GitHub\\AoC
 InputFile input = new InputFile("input.txt");
 
 int maxX, maxY;
-int[][] matrix;
+Location[][] matrix;
 int gs=16;
 
 
@@ -37,20 +37,20 @@ void setup() {
   maxX=input.lines.get(0).length();
   maxY=input.lines.size();
 
-  matrix = new int[maxX][maxY];
+  matrix = new Location[maxX][maxY];
 
-  // Loop through each food...
+  // load the matrix from the raw data of the file
   for (x=0;x<maxX;x++)
   {
     for (y=0;y<maxY;y++)
     {
       if (input.lines.get(y).charAt(x)=='#')
       {
-        matrix[x][y]=1;
+        matrix[x][y]=new Location(x,y,true);
       }
       else
       {
-        matrix[x][y]=0;
+        matrix[x][y]=new Location(x,y,false);
       }
     }
   }
@@ -73,16 +73,11 @@ void draw() {
   {
     for (y=0;y<maxY;y++)
     {
-      if (matrix[x][y]==1)
+      if (xl==x)
       {
-        fill(0,0,0);
+        matrix[x][y].hl=true;
       }
-      else
-      {
-        fill(255,255,255);
-      }
-      stroke(200,200,200);
-      rect(x*gs,y*gs,gs,gs);
+      matrix[x][y].draw();
     }
   }
 
@@ -161,6 +156,45 @@ void drawLineA(int d,float x1,float y1,float x2,float y2)
     dy=(y2<y1?-dy:dy);
     fill(255,0,0);
     rect(Math.round(x1+dx)*gs,Math.round(y1+dy)*gs,gs,gs);
+  }
+}
+
+
+public class Location
+{
+  boolean asteroid=false;
+  boolean blocked=false;
+  boolean processed=false;
+  boolean hl=false;
+  int cellx,celly;
+  
+  public Location(int x, int y, boolean a)
+  {
+    cellx=x;
+    celly=y;
+    asteroid=a;
+  }
+  
+  public void draw()
+  {
+    if (asteroid==false)
+    {
+        fill(0,0,0);
+    }
+    else
+    {
+      fill(255,255,255);
+    }
+    if (hl==true)
+    {
+      stroke(0,255,0);
+      hl=false;
+    }
+    else
+    {
+      stroke(100,100,100);
+    }
+    rect(cellx*gs,celly*gs,gs,gs);
   }
 }
 
