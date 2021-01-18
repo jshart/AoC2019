@@ -18,11 +18,11 @@ InputFile input = new InputFile("input.txt");
 
 int maxX, maxY;
 Location[][] matrix;
-int gs=16;
+int gs=48;
 
 
 void setup() {
-  size(500, 500);
+  size(1200, 1200);
   background(0);
   stroke(255);
   frameRate(30);
@@ -72,6 +72,7 @@ void draw() {
   int x,y;
   
   background(50);
+  frameRate(20);
   
   // current candidate - but its not an
   // asteroid, so lets reset & skip.
@@ -100,10 +101,19 @@ void draw() {
     {
       for (y=sy1;y<sy2;y++)
       {
+        // mark that we want to highlight this location as its
+        // part of this sweep.
         matrix[x][y].hl=true;
+        
+        // is this an asteroid? if so it means we can see it
         if (matrix[x][y].asteroid==true)
         {
           matrix[x][y].processed=true;
+          // calculate the delta;
+          //println("Ad;"+(x-basex)+","+(y-basey));
+          matrix[x][y].dx=(x-basex);
+          matrix[x][y].dy=(y-basey);
+          matrix[x][y].simplifySlope();
         }
       }
     }
@@ -117,6 +127,7 @@ void draw() {
       // the sweep for all asteroids, and now know how to
       // score this location.
       resetBaseCandidate=true;
+      frameRate(1);
     }
   }
   
@@ -133,7 +144,7 @@ void draw() {
       // the next cycle.
       if (resetBaseCandidate==true)
       {
-        matrix[x][y].processed=false;
+        matrix[x][y].reset();
       }
     }
   }
@@ -229,6 +240,17 @@ public class Location
   boolean processed=false;
   boolean hl=false;
   int cellx,celly;
+  int dx=0,dy=0,sf=0;
+  
+  public void reset()
+  {
+    dx=0;
+    dy=0;
+    sf=0;
+    processed=false;
+    blocked=false;
+    hl=false;
+  }
   
   public Location(int x, int y, boolean a)
   {
@@ -237,8 +259,34 @@ public class Location
     asteroid=a;
   }
   
+  public void simplifySlope()
+  {
+    int c;
+    if (Math.abs(dx)<=1 || Math.abs(dy)<=1)
+    {
+      return;
+    }
+    if (Math.abs(dx)>Math.abs(dy))
+    { 
+      c=dx/dy;
+      if ((c*dy)==dx)
+      {
+        sf=c;
+      }
+    }
+    else
+    {
+      c=dy/dx;
+      if ((c*dx)==dy)
+      {
+        sf=c;
+      }
+    }
+  }
+  
   public void draw()
   {
+    int tp=3;
     if (asteroid==false)
     {
       fill(0,0,0);
@@ -264,6 +312,12 @@ public class Location
       stroke(100,100,100);
     }
     rect(cellx*gs,celly*gs,gs,gs);
+    if (asteroid==true)
+    {
+      stroke(0,255,0);
+      fill(0,255,0);
+      text(dx+","+dy+"#"+sf,(cellx*gs)+tp,(celly*gs)+gs-tp);
+    }
   }
   
   public void drawBase()
