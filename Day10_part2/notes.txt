@@ -1,0 +1,7 @@
+reset the code - 
+1) setup a known base and pre-calculate the field for that base
+ - remove all the search animation etc, precompute all that and present as "first frame"
+
+2) setup a new draw() loop where we run the laser sweep per cycle
+
+can we emulate the laser sweep with a rotating line?
