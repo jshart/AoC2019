@@ -50,7 +50,10 @@ void setup() {
       }
       else
       {
-        matrix[x][y]=new Location(x,y,false);
+        
+        matrix[x][y]=new Location(x,y,true);
+        
+        //matrix[x][y]=new Location(x,y,false);
       }
     }
   }
@@ -72,7 +75,6 @@ void draw() {
   int x,y;
   
   background(50);
-  frameRate(20);
   
   // current candidate - but its not an
   // asteroid, so lets reset & skip.
@@ -113,7 +115,7 @@ void draw() {
           //println("Ad;"+(x-basex)+","+(y-basey));
           matrix[x][y].dx=(x-basex);
           matrix[x][y].dy=(y-basey);
-          matrix[x][y].simplifySlope();
+          matrix[x][y].factoriseDelta();
         }
       }
     }
@@ -127,7 +129,6 @@ void draw() {
       // the sweep for all asteroids, and now know how to
       // score this location.
       resetBaseCandidate=true;
-      frameRate(1);
     }
   }
   
@@ -176,6 +177,84 @@ void draw() {
     sy1=basey;
     sx2=sx1;
     sy2=sy1;
+    setCardinalsAsBlocked(basex,basey);
+  }
+}
+
+void setCardinalsAsBlocked(int x, int y)
+{
+  int i=0;
+  boolean firstAsteroid=false;
+
+  // South
+  for (i=y+1;i<maxY;i++)
+  {
+    if (matrix[x][i].asteroid==true)
+    {
+      if (firstAsteroid==true)
+      {
+        matrix[x][i].blocked=true;
+      }
+      firstAsteroid=true;
+    }
+  }
+  
+  firstAsteroid=false;
+  // East
+  for (i=x+1;i<maxX;i++)
+  {
+    if (matrix[i][y].asteroid==true)
+    {
+      if (firstAsteroid==true)
+      {
+        matrix[i][y].blocked=true;
+      }
+      firstAsteroid=true;
+    }
+  }
+  
+  firstAsteroid=false;
+  // North
+  for (i=y-1;i>=0;i--)
+  {
+    if (matrix[x][i].asteroid==true)
+    {
+      if (firstAsteroid==true)
+      {
+        matrix[x][i].blocked=true;
+      }
+      firstAsteroid=true;
+    }
+  }
+  
+  firstAsteroid=false;
+  // West
+  for (i=x-1;i>=0;i--)
+  {
+    if (matrix[i][y].asteroid==true)
+    {
+      if (firstAsteroid==true)
+      {
+        matrix[i][y].blocked=true;
+      }
+      firstAsteroid=true;
+    }
+  }
+}
+
+void keyPressed()
+{
+  if (key==112) // p
+  {
+    frameRate(1);
+  }
+  if (key==103) // g
+  {
+    frameRate(30);
+  }
+  if (key==115) // s
+  {
+    noLoop();
   }
 }
 
@@ -284,23 +363,69 @@ public class Location
     }
   }
   
+  public void factoriseDelta()
+  {
+    int a=Math.abs(dx);
+    int b=Math.abs(dy);
+    if (a>b)
+    {
+      sf=highestCommonFactor(a,b);
+    }
+    else
+    {
+      sf=highestCommonFactor(b,a);
+    }
+  }
+  
+  public int highestCommonFactor(int a, int b)
+  {
+    int i;
+    int af=0,bf=0;
+    
+    for (i=b;i>1;i--)
+    {
+      af=a % i;
+      bf=b % i;
+      if (af==0 && bf==0)
+      {
+        return(i);
+      }
+    }
+    return(0);
+  }
+  
   public void draw()
   {
     int tp=3;
+    int r,g,b;
     if (asteroid==false)
     {
       fill(0,0,0);
     }
     else
     {
+      r=100;
+      g=100;
+      b=100;
       if (processed==true)
       {
-        fill(225,69,0);
+        r=255;
+        g=69;
+        b=0;
       }
-      else
+      if (sf!=0)
       {
-        fill(100,100,100);
+        r=0;
+        g=100;
+        b=100;
       }
+      if (blocked==true)
+      {
+        r=0;
+        g=150;
+        b=150;
+      }
+      fill(r,g,b);
     }
     if (hl==true)
     {
