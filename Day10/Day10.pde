@@ -19,6 +19,7 @@ InputFile input = new InputFile("input.txt");
 int maxX, maxY;
 Location[][] matrix;
 int gs=48;
+Maximum maxScore = new Maximum();
 
 
 void setup() {
@@ -103,19 +104,29 @@ void draw() {
     {
       for (y=sy1;y<sy2;y++)
       {
-        // mark that we want to highlight this location as its
-        // part of this sweep.
-        matrix[x][y].hl=true;
-        
         // is this an asteroid? if so it means we can see it
-        if (matrix[x][y].asteroid==true)
+        if (matrix[x][y].asteroid==true && (basex!=x || basey!=y))
         {
-          matrix[x][y].processed=true;
-          // calculate the delta;
-          //println("Ad;"+(x-basex)+","+(y-basey));
-          matrix[x][y].dx=(x-basex);
-          matrix[x][y].dy=(y-basey);
-          matrix[x][y].factoriseDelta();
+          // Have we processed this asteroid yet?
+          if (matrix[x][y].processed==false)
+          {
+            // calculate the delta;
+            //println("Ad;"+(x-basex)+","+(y-basey));
+            matrix[x][y].dx=(x-basex);
+            matrix[x][y].dy=(y-basey);
+            matrix[x][y].factoriseDelta();
+            
+            // TODO - now that we've calculated the delta and factorised,
+            // we need to "project" that shadow out to the edge and mark
+            // any asteroids that fall into one of those locations as
+            // blocked.
+            projectShadow(x,y);
+            
+            // first time encountered, so highlight it, and
+            // mark it as processed.
+            matrix[x][y].hl=true;
+            matrix[x][y].processed=true;
+          }
         }
       }
     }
@@ -129,6 +140,7 @@ void draw() {
       // the sweep for all asteroids, and now know how to
       // score this location.
       resetBaseCandidate=true;
+      maxScore.set(calculateScore(basex,basey),basex,basey);
     }
   }
   
@@ -169,7 +181,9 @@ void draw() {
     }
     if (basey>=maxY)
     {
-      basey=0;
+      maxScore.print();
+      noLoop();
+      return;
     }
   
     // setup a sweep zone based on current base location
@@ -178,6 +192,48 @@ void draw() {
     sx2=sx1;
     sy2=sy1;
     setCardinalsAsBlocked(basex,basey);
+  }
+}
+
+public int calculateScore(int x, int y)
+{
+  int i=0,j=0;
+  int total=0;
+  
+  for (i=0;i<maxX;i++)
+  {
+    for (j=0;j<maxY;j++)
+    {
+      if (matrix[i][j].asteroid==true && matrix[i][j].blocked==false)
+      {
+        total++;
+      }
+    }
+  }
+  println("Base at:"+x+","+y+" can see:"+total);
+  return(total);
+}
+
+void projectShadow(int x, int y)
+{
+  int tx=x,ty=y;
+  Location t=matrix[x][y];
+  
+  // calculate the step we need to take to the next blocked
+  // location
+  int dx=(t.sf==0)?t.dx:t.dx/t.sf;
+  int dy=(t.sf==0)?t.dy:t.dy/t.sf;
+
+//println("dx,dy:"+dx+","+dy);
+  // repeatedly step until we're out of the draw area, and
+  // block any cell that falls in a square we land on
+  tx+=dx;
+  ty+=dy;
+  while (tx>=0 && tx<maxX && ty>=0 && ty<maxY)
+  {
+    matrix[tx][ty].blocked=true;
+    tx+=dx;
+    ty+=dy;
   }
 }
 
@@ -338,30 +394,30 @@ public class Location
     asteroid=a;
   }
   
-  public void simplifySlope()
-  {
-    int c;
-    if (Math.abs(dx)<=1 || Math.abs(dy)<=1)
-    {
-      return;
-    }
-    if (Math.abs(dx)>Math.abs(dy))
-    { 
-      c=dx/dy;
-      if ((c*dy)==dx)
-      {
-        sf=c;
-      }
-    }
-    else
-    {
-      c=dy/dx;
-      if ((c*dx)==dy)
-      {
-        sf=c;
-      }
-    }
-  }
+  //public void simplifySlope()
+  //{
+  //  int c;
+  //  if (Math.abs(dx)<=1 || Math.abs(dy)<=1)
+  //  {
+  //    return;
+  //  }
+  //  if (Math.abs(dx)>Math.abs(dy))
+  //  { 
+  //    c=dx/dy;
+  //    if ((c*dy)==dx)
+  //    {
+  //      sf=c;
+  //    }
+  //  }
+  //  else
+  //  {
+  //    c=dy/dx;
+  //    if ((c*dx)==dy)
+  //    {
+  //      sf=c;
+  //    }
+  //  }
+  //}
   
   public void factoriseDelta()
   {
@@ -398,44 +454,62 @@ public class Location
   {
     int tp=3;
     int r,g,b;
-    if (asteroid==false)
+    
+    // not an asteroid - so paint as black for "space"
+    if (asteroid==false) 
     {
-      fill(0,0,0);
+      r=0;
+      g=0;
+      b=0;
     }
     else
     {
       r=100;
       g=100;
       b=100;
-      if (processed==true)
+      
+      // any asteroid we've processed is now orange
+      if (processed==true) 
       {
         r=255;
-        g=69;
-        b=0;
+        g=210;
+        b=120;
+      
+        // subcase - where this processed element potentially has a common
+        // factor - highlight in a different shade of orange
+        if (sf!=0) 
+        {
+          r=233;
+          g=144;
+          b=0;
+        }
       }
-      if (sf!=0)
-      {
-        r=0;
-        g=100;
-        b=100;
-      }
+      
+      // asteroid has been calculated as blocked from view, paint it a different
+      // colour
       if (blocked==true)
       {
         r=0;
         g=150;
         b=150;
       }
-      fill(r,g,b);
     }
+    
+    // as we're calculating - we highlight first time we encounter a cell
     if (hl==true)
     {
-      stroke(0,255,0);
+      stroke(0,0,255);
+      r=255;
+      g=255;
+      b=0;
       hl=false;
     }
     else
     {
       stroke(100,100,100);
     }
+    
+    fill(r,g,b);
     rect(cellx*gs,celly*gs,gs,gs);
     if (asteroid==true)
     {
@@ -550,18 +624,27 @@ public class Minimum
 public class Maximum
 {
   int value=0;
+  int x;
+  int y;
   
   public Maximum()
   {
   }
 
-  public void set(int v)
+  public void set(int v, int tx, int ty)
   {
 
     if (v>value)
     {
       value=v;
+      x=tx;
+      y=ty;
     }
+  }
+  
+  public void print()
+  {
+    println(x+","+y+"="+value);
   }
 }
 
