@@ -5,6 +5,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 String filebase = new String("C:\\Users\\jsh27\\OneDrive\\Documents\\GitHub\\AoC2019\\Day10\\data\\mydata");
+// part 1 solution; 20,18=281 (minus 1 for the base)
 
 //ArrayList<String> fieldLines = new ArrayList<String>();
 //int numFieldLines=0;
