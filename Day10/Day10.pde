@@ -51,9 +51,9 @@ void setup() {
       else
       {
         
-        matrix[x][y]=new Location(x,y,true);
+        //matrix[x][y]=new Location(x,y,true);
         
-        //matrix[x][y]=new Location(x,y,false);
+        matrix[x][y]=new Location(x,y,false);
       }
     }
   }
