@@ -5,3 +5,8 @@ reset the code -
 2) setup a new draw() loop where we run the laser sweep per cycle
 
 can we emulate the laser sweep with a rotating line?
+
+yes - I think we can using Vectors and LERP;
+https://processing.org/reference/PVector.html
+
+https://processing.org/reference/PVector_lerp_.html
